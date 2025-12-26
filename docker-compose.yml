@@ -1,0 +1,16 @@
+services:
+  speedtest-tracker-multi:
+    build:
+      context: ./docker/8.4
+      dockerfile: Dockerfile
+      args:
+        WWWGROUP: '${WWWGROUP}'
+    image: speedtest-tracker-8.4/app
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    container_name: speedtest-tracker-multi
+    volumes:
+      - /serverdata/speedtest-tracker-data/config:/config
+    cap_add:
+      - SYS_ADMIN
