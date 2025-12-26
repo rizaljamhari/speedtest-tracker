@@ -30,50 +30,80 @@ class RecentUploadChartWidget extends ChartWidget
 
     public function mount(): void
     {
-        $this->filter = $this->filter ?? config('speedtest.default_chart_range', '24h');
+        $this->filter = $this->filter ?? (config('speedtest.default_chart_range', '24h') . '|all');
     }
 
     protected function getData(): array
     {
+        $filterParts = explode('|', $this->filter ?? '24h|all');
+        $timeFilter = $filterParts[0] ?? '24h';
+        $serviceFilter = $filterParts[1] ?? 'all';
+
         $results = Result::query()
-            ->select(['id', 'upload', 'created_at'])
+            ->select(['id', 'service', 'upload', 'created_at'])
             ->where('status', '=', ResultStatus::Completed)
-            ->when($this->filter === '24h', function ($query) {
+            ->when($serviceFilter !== 'all', function ($query) use ($serviceFilter) {
+                $query->where('service', $serviceFilter);
+            })
+            ->when($timeFilter === '24h', function ($query) {
                 $query->where('created_at', '>=', now()->subDay());
             })
-            ->when($this->filter === 'week', function ($query) {
+            ->when($timeFilter === 'week', function ($query) {
                 $query->where('created_at', '>=', now()->subWeek());
             })
-            ->when($this->filter === 'month', function ($query) {
+            ->when($timeFilter === 'month', function ($query) {
                 $query->where('created_at', '>=', now()->subMonth());
             })
             ->orderBy('created_at')
             ->get();
 
+        $datasets = [];
+
+        // Group results by service
+        $services = $results->groupBy('service');
+
+        foreach ($services as $serviceName => $serviceResults) {
+            $color = match ($serviceName) {
+                'ookla' => '139, 92, 246', // Violet for Upload default? Or maybe generic default. 
+                                           // Let's stick to consistent Service colors: ookla=Blue, fast=Red
+                'ookla' => '14, 165, 233', // Sky Blue
+                'fast' => '220, 38, 38',   // Red
+                default => '139, 92, 246', // Violet
+            };
+
+            // Fix for duplicate key in match map above
+            // Actually, let's use the same map as Download chart for consistency.
+            $color = match ($serviceName) {
+                'ookla' => '14, 165, 233', // Sky Blue
+                'fast' => '220, 38, 38',   // Red
+                'cloudflare' => '249, 115, 22', // Orange
+                default => '139, 92, 246', // Violet
+            };
+
+            $data = $results->map(function ($result) use ($serviceName) {
+                $serviceValue = $result->service instanceof \App\Enums\ResultService ? $result->service->value : $result->service;
+                if ($serviceValue === $serviceName) {
+                    return ! blank($result->upload) ? Number::bitsToMagnitude(bits: $result->upload_bits, precision: 2, magnitude: 'mbit') : null;
+                }
+                return null;
+            });
+
+            $datasets[] = [
+                'label' => ucfirst($serviceName),
+                'data' => $data,
+                'borderColor' => "rgba($color, 1)",
+                'backgroundColor' => "rgba($color, 0.1)",
+                'pointBackgroundColor' => "rgba($color, 1)",
+                'fill' => true,
+                'cubicInterpolationMode' => 'monotone',
+                'tension' => 0.4,
+                'pointRadius' => count($results) <= 24 ? 3 : 0,
+                'spanGaps' => true,
+            ];
+        }
+
         return [
-            'datasets' => [
-                [
-                    'label' => __('general.upload'),
-                    'data' => $results->map(fn ($item) => ! blank($item->upload) ? Number::bitsToMagnitude(bits: $item->upload_bits, precision: 2, magnitude: 'mbit') : null),
-                    'borderColor' => 'rgba(139, 92, 246)',
-                    'backgroundColor' => 'rgba(139, 92, 246, 0.1)',
-                    'pointBackgroundColor' => 'rgba(139, 92, 246)',
-                    'fill' => true,
-                    'cubicInterpolationMode' => 'monotone',
-                    'tension' => 0.4,
-                    'pointRadius' => count($results) <= 24 ? 3 : 0,
-                ],
-                [
-                    'label' => __('general.average'),
-                    'data' => array_fill(0, count($results), Average::averageUpload($results)),
-                    'borderColor' => 'rgb(243, 7, 6, 1)',
-                    'pointBackgroundColor' => 'rgb(243, 7, 6, 1)',
-                    'fill' => false,
-                    'cubicInterpolationMode' => 'monotone',
-                    'tension' => 0.4,
-                    'pointRadius' => 0,
-                ],
-            ],
+            'datasets' => $datasets,
             'labels' => $results->map(fn ($item) => $item->created_at->timezone(config('app.display_timezone'))->format(config('app.chart_datetime_format'))),
         ];
     }

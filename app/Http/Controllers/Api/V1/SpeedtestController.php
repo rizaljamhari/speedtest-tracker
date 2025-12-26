@@ -36,13 +36,13 @@ class SpeedtestController extends ApiController
             );
         }
 
-        $result = RunSpeedtestAction::run(
+        $results = \App\Actions\Speedtest\RunSpeedtest::run(
             serverId: $request->input('server_id'),
             dispatchedBy: $request->user()->id,
         );
 
         return $this->sendResponse(
-            data: new ResultResource($result),
+            data: ResultResource::collection($results),
             message: 'Speedtest added to the queue.',
             code: Response::HTTP_CREATED,
         );

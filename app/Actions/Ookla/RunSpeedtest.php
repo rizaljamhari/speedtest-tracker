@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\Log;
 use Lorisleiva\Actions\Concerns\AsAction;
 use Throwable;
 
+/**
+ * @deprecated Use App\Actions\Speedtest\RunSpeedtest instead.
+ */
 class RunSpeedtest
 {
     use AsAction;

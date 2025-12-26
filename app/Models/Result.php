@@ -44,7 +44,7 @@ class Result extends Model
      */
     public function prunable(): Builder
     {
-        return static::where('created_at', '<=', now()->subDays(config('speedtest.prune_results_older_than')));
+        return static::where('created_at', '<=', now()->subDays(app(\App\Settings\GeneralSettings::class)->prune_results_older_than));
     }
 
     /**

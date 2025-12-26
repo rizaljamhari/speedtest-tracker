@@ -13,6 +13,8 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Illuminate\Support\HtmlString;
 
+use App\Settings\GeneralSettings;
+
 class ResultForm
 {
     public static function schema(): array
@@ -30,9 +32,10 @@ class ResultForm
                                 TextInput::make('created_at')
                                     ->label(__('general.created_at'))
                                     ->afterStateHydrated(function (TextInput $component, $state) {
+                                        $settings = app(GeneralSettings::class);
                                         $component->state(Carbon::parse($state)
-                                            ->timezone(config('app.display_timezone'))
-                                            ->format(config('app.datetime_format')));
+                                            ->timezone($settings->display_timezone)
+                                            ->format($settings->datetime_format));
                                     }),
                                 TextInput::make('download')
                                     ->label(__('general.download'))

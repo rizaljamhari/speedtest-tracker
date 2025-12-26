@@ -2,7 +2,6 @@
 
 namespace App\Actions;
 
-use App\Actions\Ookla\RunSpeedtest;
 use Cron\CronExpression;
 use Lorisleiva\Actions\Concerns\AsAction;
 
@@ -12,13 +11,14 @@ class CheckForScheduledSpeedtests
 
     public function handle(): void
     {
-        $schedule = config('speedtest.schedule');
+        $settings = app(\App\Settings\GeneralSettings::class);
+        $schedule = $settings->speedtest_schedule;
 
         if (blank($schedule) || $schedule === false) {
             return;
         }
 
-        RunSpeedtest::runIf(
+        \App\Actions\Speedtest\RunSpeedtest::runIf(
             $this->isSpeedtestDue(schedule: $schedule),
             scheduled: true,
         );

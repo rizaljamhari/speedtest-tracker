@@ -24,6 +24,8 @@ services:
             - pgsql
             - mailpit
             - apprise
+        cap_add:
+            - SYS_ADMIN
     pgsql:
         image: 'postgres:17-alpine'
         ports:

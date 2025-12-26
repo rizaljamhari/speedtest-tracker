@@ -3,7 +3,7 @@
 namespace App\Livewire\Topbar;
 
 use App\Actions\GetOoklaSpeedtestServers;
-use App\Actions\Ookla\RunSpeedtest;
+use App\Actions\Speedtest\RunSpeedtest;
 use App\Helpers\Ookla;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;

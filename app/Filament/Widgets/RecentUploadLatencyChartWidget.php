@@ -6,6 +6,7 @@ use App\Enums\ResultStatus;
 use App\Filament\Widgets\Concerns\HasChartFilters;
 use App\Models\Result;
 use Filament\Widgets\ChartWidget;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 
 class RecentUploadLatencyChartWidget extends ChartWidget
 {
@@ -28,21 +29,28 @@ class RecentUploadLatencyChartWidget extends ChartWidget
 
     public function mount(): void
     {
-        $this->filter = $this->filter ?? config('speedtest.default_chart_range', '24h');
+        $this->filter = $this->filter ?? (config('speedtest.default_chart_range', '24h') . '|all');
     }
 
     protected function getData(): array
     {
+        $filterParts = explode('|', $this->filter ?? '24h|all');
+        $timeFilter = $filterParts[0] ?? '24h';
+        $serviceFilter = $filterParts[1] ?? 'all';
+
         $results = Result::query()
             ->select(['id', 'data', 'created_at'])
             ->where('status', '=', ResultStatus::Completed)
-            ->when($this->filter === '24h', function ($query) {
+            ->when($serviceFilter !== 'all', function ($query) use ($serviceFilter) {
+                $query->where('service', $serviceFilter);
+            })
+            ->when($timeFilter === '24h', function ($query) {
                 $query->where('created_at', '>=', now()->subDay());
             })
-            ->when($this->filter === 'week', function ($query) {
+            ->when($timeFilter === 'week', function ($query) {
                 $query->where('created_at', '>=', now()->subWeek());
             })
-            ->when($this->filter === 'month', function ($query) {
+            ->when($timeFilter === 'month', function ($query) {
                 $query->where('created_at', '>=', now()->subMonth());
             })
             ->orderBy('created_at')

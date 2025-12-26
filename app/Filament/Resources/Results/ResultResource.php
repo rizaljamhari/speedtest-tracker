@@ -6,6 +6,7 @@ use App\Filament\Resources\Results\Pages\ListResults;
 use App\Filament\Resources\Results\Schemas\ResultForm;
 use App\Filament\Resources\Results\Tables\ResultTable;
 use App\Models\Result;
+use App\Settings\GeneralSettings;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;

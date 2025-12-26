@@ -20,13 +20,16 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN echo "Acquire::http::Pipeline-Depth 0;" > /etc/apt/apt.conf.d/99custom && \
     echo "Acquire::http::No-Cache true;" >> /etc/apt/apt.conf.d/99custom && \
-    echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom
+    echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom && \
+    echo "Package: chromium*\nPin: origin ppa.launchpadcontent.net\nPin-Priority: 1001" > /etc/apt/preferences.d/chromium
 
 RUN apt-get update && apt-get upgrade -y \
     && mkdir -p /etc/apt/keyrings \
     && apt-get install -y gnupg gosu curl ca-certificates zip unzip git supervisor sqlite3 libcap2-bin libpng-dev python3 dnsutils iputils-ping librsvg2-bin fswatch \
     && curl -sS 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xb8dc7e53946656efbce4c1dd71daeaab4ad4cab6' | gpg --dearmor | tee /etc/apt/keyrings/ppa_ondrej_php.gpg > /dev/null \
     && echo "deb [signed-by=/etc/apt/keyrings/ppa_ondrej_php.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu noble main" > /etc/apt/sources.list.d/ppa_ondrej_php.list \
+    && curl -sS 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x82BB6851C64F6880' | gpg --dearmor | tee /etc/apt/keyrings/xtradeb_apps.gpg > /dev/null \
+    && echo "deb [signed-by=/etc/apt/keyrings/xtradeb_apps.gpg] https://ppa.launchpadcontent.net/xtradeb/apps/ubuntu noble main" > /etc/apt/sources.list.d/xtradeb_apps.list \
     && apt-get update \
     && apt-get install -y php8.4-cli php8.4-dev \
        php8.4-pgsql php8.4-sqlite3 php8.4-gd \
@@ -42,6 +45,11 @@ RUN apt-get update && apt-get upgrade -y \
     && apt-get update \
     && apt-get install -y nodejs \
     && npm install -g npm \
+    && git clone https://github.com/rizaljamhari/fast-cli.git /serverdata/fast-cli \
+    && cd /serverdata/fast-cli \
+    && npm install \
+    && npm run build \
+    && npm install -g . \
     && curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor | tee /etc/apt/keyrings/pgdg.gpg >/dev/null \
     && echo "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] http://apt.postgresql.org/pub/repos/apt noble-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
@@ -63,9 +71,17 @@ RUN apt-get update && apt-get upgrade -y \
     && curl -o /tmp/librespeed-cli.tar.gz -L \
          "https://github.com/librespeed/speedtest-cli/releases/download/v$LIBRESPEED_VERSION/librespeed-cli_${LIBRESPEED_VERSION}_linux_${LIBRESPEED_PLATFORM}.tar.gz" \
     && tar -xzf /tmp/librespeed-cli.tar.gz -C /usr/bin \
+    && apt-get install -y chromium \
+    && curl -o /tmp/cfspeedtest.tar.gz -L \
+        "https://github.com/code-inflation/cfspeedtest/releases/download/v2.0.2/cfspeedtest-${PLATFORM}-unknown-linux-gnu.tar.gz" \
+    && tar -xzf /tmp/cfspeedtest.tar.gz -C /usr/bin \
+    && chmod +x /usr/bin/cfspeedtest \
     && apt-get -y autoremove \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 RUN setcap "cap_net_bind_service=+ep" /usr/bin/php8.4
 
